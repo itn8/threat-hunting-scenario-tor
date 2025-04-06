@@ -75,37 +75,43 @@ DeviceProcessEvents
 
 ### 3. Searched the `DeviceProcessEvents` Table for TOR Browser Execution
 
-Searched for any indication that user "employee" actually opened the TOR browser. There was evidence that they did open it at `2024-11-08T22:17:21.6357935Z`. There were several other instances of `firefox.exe` (TOR) as well as `tor.exe` spawned afterwards.
+A web search was conducted to determine common executable names for the TOR browser. These names were used in a new search in the `DeviceProcessEvents` table by isolating hits with filenames containing "firefox.exe", "tor.exe" or "tor-browser.exe". 
+Results showed multiple `firefox.exe` processes created with directory paths originating from the TOR browser installation folder, and a later `tor.exe` process. The associated timestamp for the first process instance was logged at: `2025-04-02T00:51:44.0556845Z`
+This further served the TOR browser narrative, as the TOR browser is a modified version of Mozilla's Firefox browser. 
 
-**Query used to locate events:**
+**Combined query elements:**
 
 ```kql
-DeviceProcessEvents  
-| where DeviceName == "threat-hunt-lab"  
-| where FileName has_any ("tor.exe", "firefox.exe", "tor-browser.exe")  
-| project Timestamp, DeviceName, AccountName, ActionType, FileName, FolderPath, SHA256, ProcessCommandLine  
-| order by Timestamp desc
+DeviceProcessEvents
+| where DeviceName == "onboardingwinvm"
+| where AccountName == "labuser"
+| where FileName has_any ("tor.exe", "firefox.exe", "tor-browser.exe")
 ```
-<img width="1212" alt="image" src="https://github.com/user-attachments/assets/b13707ae-8c2d-4081-a381-2b521d3a0d8f">
+<img width="1212" alt="image" src="https://github.com/user-attachments/assets/f8582ab7-ff4c-48f5-b59e-3671be84d21f" />
+
 
 ---
 
 ### 4. Searched the `DeviceNetworkEvents` Table for TOR Network Connections
 
-Searched for any indication the TOR browser was used to establish a connection using any of the known TOR ports. At `2024-11-08T22:18:01.1246358Z`, an employee on the "threat-hunt-lab" device successfully established a connection to the remote IP address `176.198.159.33` on port `9001`. The connection was initiated by the process `tor.exe`, located in the folder `c:\users\employee\desktop\tor browser\browser\torbrowser\tor\tor.exe`. There were a couple of other connections to sites over port `443`.
+The file sizes of the tor.exe and firefox.exe executables were noted. To determine searches were performed with the browser, the DeviceNetworkEvents table was searched for the VM in question with a query narrowing to the noted file sizes. 
+Common ports associated with the TOR browser were investigated, then narrowed in the query. 
 
-**Query used to locate events:**
+It was found that at timestamp `2025-04-02T00:52:19.290646Z`, that the user `labuser` created a successful connection utilizing the TOR browser with `firefox.exe` found in directory path `c:\users\labuser\desktop\torbrowser\browser\tor.exe` over port 9001 from local port 50525.
+
+**Combined query elements:**
+
 
 ```kql
-DeviceNetworkEvents  
-| where DeviceName == "threat-hunt-lab"  
-| where InitiatingProcessAccountName != "system"  
-| where InitiatingProcessFileName in ("tor.exe", "firefox.exe")  
-| where RemotePort in ("9001", "9030", "9040", "9050", "9051", "9150", "80", "443")  
-| project Timestamp, DeviceName, InitiatingProcessAccountName, ActionType, RemoteIP, RemotePort, RemoteUrl, InitiatingProcessFileName, InitiatingProcessFolderPath  
-| order by Timestamp desc
+DeviceNetworkEvents
+| where DeviceName == "onboardingwinvm"
+| where InitiatingProcessAccountName == "labuser"
+| where InitiatingProcessFileSize in (1758208, 8979968)
+| where RemotePort in ("9001", "9030", "9040", "9050", "9051", "9150", "80", "443")
+| project Timestamp, DeviceName, InitiatingProcessAccountName, ActionType, RemoteIP, RemotePort, LocalPort, InitiatingProcessFileName, InitiatingProcessFolderPath 
 ```
-<img width="1212" alt="image" src="https://github.com/user-attachments/assets/87a02b5b-7d12-4f53-9255-f5e750d0e3cb">
+<img width="1263" alt="image" src="https://github.com/user-attachments/assets/703e7c99-73e4-447c-8420-cd4443c85549" />
+
 
 ---
 
