@@ -47,24 +47,29 @@ DeviceFileEvents
 | project Timestamp, ActionType, FileName, SHA256, InitiatingProcessAccountName, InitiatingProcessFileName, InitiatingProcessFolderPath, InitiatingProcessCommandLine
 | order by Timestamp desc
 ```
-<img width="1212" alt="image" src="https://github.com/user-attachments/assets/ab4c8dc8-4132-47b1-b773-86ae0ada5b5a">
+<img width="1212" alt="image" src="https://github.com/user-attachments/assets/ab4c8dc8-4132-47b1-b773-86ae0ada5b5a" />
 
 ---
 
 ### 2. Searched the `DeviceProcessEvents` Table
 
-Searched for any `ProcessCommandLine` that contained the string "tor-browser-windows-x86_64-portable-14.0.1.exe". Based on the logs returned, at `2024-11-08T22:16:47.4484567Z`, an employee on the "threat-hunt-lab" device ran the file `tor-browser-windows-x86_64-portable-14.0.1.exe` from their Downloads folder, using a command that triggered a silent installation.
+The first suspicious instance in the previously-searched `DeviceFileEvents` table contained a file named "tor-browser-windows-x86_64-portable-14.0.9.exe". 
+A web browser search showed the filename reflected the most recent stable release of TOR browser. The SHA256 hash of the executable logged on the VM was compared to TOR's public hash of the same version and showed a match, confirming the executable's contents. 
 
-**Query used to locate event:**
+With this information, the `DeviceProcessEvents` table was queried to find concrete information on any executions that were run. This query contained the device name, username, and browser executable to begin. 
+Results found a single hit for the file name, and further, showed a `tor-browser-windows-x86_64-portable-14.0.9.exe  /S` entry under the `ProcessCommandLine` column. This highlighted a deliberate silent installation of the file from the Downloads directory by using the "/S" switch in the command line. 
+The associated timestamp with this installation was: `2025-04-02T00:47:54.9755596Z`.
+
+**Combined query elements:**
 
 ```kql
-
-DeviceProcessEvents  
-| where DeviceName == "threat-hunt-lab"  
-| where ProcessCommandLine contains "tor-browser-windows-x86_64-portable-14.0.1.exe"  
-| project Timestamp, DeviceName, AccountName, ActionType, FileName, FolderPath, SHA256, ProcessCommandLine
+DeviceProcessEvents
+| where DeviceName == "onboardingwinvm"
+| where AccountName == "labuser"
+| where FileName contains "tor-browser-windows-x86_64-portable-14.0.9.exe"
 ```
-<img width="1212" alt="image" src="https://github.com/user-attachments/assets/b07ac4b4-9cb3-4834-8fac-9f5f29709d78">
+<img width="1212" alt="image" src="https://github.com/user-attachments/assets/9620f187-1f0a-433e-9c9c-2c4551ae8aa7" />
+
 
 ---
 
