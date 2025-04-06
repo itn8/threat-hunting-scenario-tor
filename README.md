@@ -25,20 +25,29 @@ Management suspects that some employees may be using TOR browsers to bypass netw
 
 ### 1. Searched the `DeviceFileEvents` Table
 
-Searched for any file that had the string "tor" in it and discovered what looks like the user "employee" downloaded a TOR installer, did something that resulted in many TOR-related files being copied to the desktop, and the creation of a file called `tor-shopping-list.txt` on the desktop at `2024-11-08T22:27:19.7259964Z`. These events began at `2024-11-08T22:14:48.6065231Z`.
+the DeviceFileEvents table was searched for any file with the string "tor" in it. An associated device, "onboardingwinvm" and user, "labuser" was returned from the query. 
+After discovering what seemed to be the first instance of suspicious related file executions, the query was further narrowed to project hits after this first instance's timestamp, and eliminate entries of expected system processes. 
+The remaining events allowed deduction through their timeline that a tor installer preceded multiple tor-related files being copied to the device's desktop, and the creation of a text file named `tor-shopping-list.exe`. 
+These events began at: `2025-04-02T00:45:38.6247811Z`
+The `tor-shopping-list` text file was created at: `2025-04-02T01:04:34.6741532Z`
 
-**Query used to locate events:**
+**Combined query elements:**
 
 ```kql
-DeviceFileEvents  
-| where DeviceName == "threat-hunt-lab"  
-| where InitiatingProcessAccountName == "employee"  
-| where FileName contains "tor"  
-| where Timestamp >= datetime(2024-11-08T22:14:48.6065231Z)  
-| order by Timestamp desc  
-| project Timestamp, DeviceName, ActionType, FileName, FolderPath, SHA256, Account = InitiatingProcessAccountName
+DeviceFileEvents
+| where DeviceName == "onboardingwinvm"
+| where InitiatingProcessAccountName == "labuser"
+| where FileName contains "tor"
+   	and FileName !contains "history"
+   	and FileName !contains "storage"  
+   	and FileName !contains "tutorial"
+   	and FileName !contains "validator"
+   	and FileName !contains "webappsstore"
+| where Timestamp >= datetime(2025-04-02T00:45:38.6247811Z)
+| project Timestamp, ActionType, FileName, SHA256, InitiatingProcessAccountName, InitiatingProcessFileName, InitiatingProcessFolderPath, InitiatingProcessCommandLine
+| order by Timestamp desc
 ```
-<img width="1212" alt="image" src="https://github.com/user-attachments/assets/71402e84-8767-44f8-908c-1805be31122d">
+<img width="1212" alt="image" src="https://github.com/user-attachments/assets/ab4c8dc8-4132-47b1-b773-86ae0ada5b5a">
 
 ---
 
